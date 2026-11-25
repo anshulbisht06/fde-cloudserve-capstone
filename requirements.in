@@ -1,0 +1,31 @@
+# Top-level dependencies. requirements.txt is generated from this file and pins every package.
+
+# Orchestration
+langgraph
+
+# Model access: Groq and OpenRouter both speak the OpenAI API
+openai
+
+# Vector store; its built-in embedding function runs all-MiniLM-L6-v2 through ONNX, so no PyTorch is needed
+chromadb
+# Last release with Intel-Mac builds (needs macOS 13+); newer ones are Apple Silicon only on macOS
+onnxruntime==1.23.2
+# Highest numpy that supports Python 3.11 and 3.12 with prebuilt packages everywhere
+numpy==2.4.6
+
+# API
+fastapi
+uvicorn
+
+# Classification and metrics
+scikit-learn
+
+# Configuration
+python-dotenv
+
+# Monitoring
+prometheus-client
+
+# Tests (httpx is needed by FastAPI's test client)
+pytest
+httpx
