@@ -18,19 +18,50 @@ def client_for(settings: config.ProviderSettings, timeout: float = 30.0, max_ret
                   timeout=timeout, max_retries=max_retries)
 
 
-def chat(messages: list[dict], *, provider_name: str | None = None, temperature: float = 0.0,
-         max_tokens: int = 512, timeout: float = 30.0) -> dict:
+def is_reasoning_model(model: str) -> bool:
+    return model.startswith("openai/gpt-oss")
+
+
+def request_options(settings: config.ProviderSettings, *, max_tokens: int,
+                    temperature: float | None = None, reasoning_effort: str | None = None) -> dict:
+    """Provider-specific request arguments, kept separate so they can be tested without a network call."""
+    options: dict = {"model": settings.model}
+    if settings.name == "groq":
+        options["max_completion_tokens"] = max_tokens
+        if is_reasoning_model(settings.model):
+            options["reasoning_effort"] = reasoning_effort or config.REASONING_EFFORT
+            # Groq-specific: leave the model's reasoning out of the reply, so content holds only the answer
+            options["extra_body"] = {"include_reasoning": False}
+    else:
+        options["max_tokens"] = max_tokens
+    if temperature is not None:
+        options["temperature"] = temperature
+    return options
+
+
+def chat(messages: list[dict], *, provider_name: str | None = None, max_tokens: int = 1024,
+         temperature: float | None = None, timeout: float = 30.0) -> dict:
     """Send one chat request and return the reply text with the details needed for logging."""
     settings = config.provider(provider_name)
     client = client_for(settings, timeout=timeout)
+    if temperature is None:
+        temperature = config.TEMPERATURE
     started = time.perf_counter()
     response = client.chat.completions.create(
-        model=settings.model, messages=messages, temperature=temperature, max_tokens=max_tokens,
+        messages=messages, **request_options(settings, max_tokens=max_tokens, temperature=temperature),
     )
+    choice = response.choices[0]
     return {
-        "text": response.choices[0].message.content or "",
+        "text": choice.message.content or "",
+        "finish_reason": choice.finish_reason,
         "provider": settings.name,
         "model": response.model or settings.model,
         "latency_s": round(time.perf_counter() - started, 3),
         "usage": response.usage.model_dump() if response.usage else None,
     }
+
+
+def available_models(provider_name: str | None = None) -> list[str]:
+    """Model IDs that the configured key can use, as the provider reports them."""
+    settings = config.provider(provider_name)
+    return sorted(model.id for model in client_for(settings).models.list())

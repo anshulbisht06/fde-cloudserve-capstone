@@ -53,7 +53,15 @@ python -m scripts.check_model
 ```
 
 A working setup prints the provider, model and latency, then `Reply: 'ready'` (or similar).
-If it prints `Setup problem`, the key is missing from `.env`.
+If it prints `Setup problem`, the key is missing from `.env`. If it says the model is not available, it
+lists the models your key can use; you can also list them with:
+
+```bash
+python -m scripts.list_models
+```
+
+Providers retire models: Groq shut down `llama-3.1-8b-instant` on 16 August 2026, which is why the default
+is now `openai/gpt-oss-20b`.
 
 ## Run the tests
 
@@ -75,6 +83,7 @@ src/                 application code
   llm.py             the one place that calls the language model
 scripts/
   check_model.py     day-one check that the model provider answers
+  list_models.py     lists the models your key can use
 prompts/             versioned prompt library (build/ and evaluation/)
 tests/               automated tests, run with python -m pytest
 evaluation/          evaluation harness and dated results (results/)
@@ -91,7 +100,9 @@ All settings live in `.env` (copied from `.env.example`):
 | Variable | Purpose |
 |---|---|
 | `LLM_PROVIDER` | `groq` (default) or `openrouter` |
-| `GROQ_API_KEY`, `GROQ_BASE_URL`, `GROQ_MODEL` | Groq connection; default model `llama-3.1-8b-instant` |
+| `GROQ_API_KEY`, `GROQ_BASE_URL`, `GROQ_MODEL` | Groq connection; default model `openai/gpt-oss-20b` |
+| `LLM_REASONING_EFFORT` | how much a reasoning model thinks first: `low` (default), `medium` or `high` |
+| `LLM_TEMPERATURE` | optional; sent only when set |
 | `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`, `OPENROUTER_MODEL` | optional fallback provider |
 | `EMBEDDING_MODEL` | embedding model for retrieval (`all-MiniLM-L6-v2`) |
 | `CHROMA_PATH`, `DATABASE_PATH` | where the vector store and decision log are kept |

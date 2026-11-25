@@ -40,11 +40,30 @@ def test_unknown_provider_is_rejected(monkeypatch):
 
 def test_provider_settings_come_from_the_environment(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "test-key")
-    monkeypatch.setenv("GROQ_MODEL", "llama-3.1-8b-instant")
+    monkeypatch.setenv("GROQ_MODEL", "openai/gpt-oss-20b")
     settings = config.provider("groq")
     assert settings.base_url.startswith("https://")
-    assert settings.model == "llama-3.1-8b-instant"
+    assert settings.model == "openai/gpt-oss-20b"
     assert "test-key" not in repr(settings)
+
+
+def test_groq_reasoning_model_gets_reasoning_options():
+    from src.llm import request_options
+
+    settings = config.ProviderSettings("groq", "k", "https://api.groq.com/openai/v1", "openai/gpt-oss-20b")
+    options = request_options(settings, max_tokens=256)
+    assert options["max_completion_tokens"] == 256
+    assert options["reasoning_effort"] in {"low", "medium", "high"}
+    assert options["extra_body"] == {"include_reasoning": False}
+    assert "temperature" not in options
+
+
+def test_openrouter_uses_plain_options():
+    from src.llm import request_options
+
+    settings = config.ProviderSettings("openrouter", "k", "https://openrouter.ai/api/v1", "some/model:free")
+    options = request_options(settings, max_tokens=100, temperature=0.2)
+    assert options == {"model": "some/model:free", "max_tokens": 100, "temperature": 0.2}
 
 
 def test_check_model_reports_a_missing_key(monkeypatch, capsys):
